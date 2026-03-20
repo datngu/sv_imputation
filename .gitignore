@@ -1,0 +1,9 @@
+
+data/genomes/*
+data/ref_panel/*
+_misc/*
+
+.nextflow.*
+work/*
+*output/*
+*traces/*
