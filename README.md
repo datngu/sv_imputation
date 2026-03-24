@@ -15,8 +15,6 @@ The pipeline is split into two independent phases:
   SV reference panel (SNP positions from Phase 1 + all SVs), and run Beagle SV imputation
   per batch × per chromosome. Merge batches per chromosome at the end.
 
-A legacy combined pipeline (`main.nf`) supporting `1stage` / `2stage` modes is also retained.
-
 ---
 
 ## Dependencies
@@ -131,10 +129,7 @@ Step 5  MergeSVBatches          Merge all batches per chromosome
 | `1d.run_phase2.sh` | local | Phase 2 — local test run |
 | `2c.run_saga_phase1.sh` | SAGA HPC | Phase 1 — SBATCH job (Singularity) |
 | `2d.run_saga_phase2.sh` | SAGA HPC | Phase 2 — SBATCH job (Singularity) |
-| `1a.run_test_1stage.sh` | local | Legacy combined pipeline, 1-stage mode |
-| `1b.run_test_2stages.sh` | local | Legacy combined pipeline, 2-stage mode |
-| `2a.run_saga_1stage.sh` | SAGA HPC | Legacy combined pipeline, 1-stage, SBATCH |
-| `2b.run_saga_2stages.sh` | SAGA HPC | Legacy combined pipeline, 2-stage, SBATCH |
+
 
 ### Phase 1 (local)
 
