@@ -67,9 +67,15 @@ workflow {
         .filter { chrom, batch, vcf, csi -> chrom in params.chromosomes.toList() }
     // emits: (chrom, batch, vcf, csi)
 
-    // Step 1: Collect all SNP positions from Phase 1 imputed VCFs
-    //         (union across all batches × all chromosomes)
-    snp_pos_ch = CollectSNPPositions( snp_imputed_ch.map { chrom, batch, vcf, csi -> vcf }.collect() )
+    // Step 1: Collect SNP positions from Phase 1 imputed VCFs.
+    //         All batches share the same reference panel → identical positions per chromosome.
+    //         Take one VCF per chromosome (first batch) to avoid redundant work.
+    snp_pos_ch = CollectSNPPositions(
+        snp_imputed_ch
+            .groupTuple(by: 0)
+            .map { chrom, batches, vcfs, csis -> vcfs instanceof List ? vcfs[0] : vcfs }
+            .collect()
+    )
     // emits: path("all_snp_positions.tsv")
 
     // Step 2: Build reduced SV reference panel:
