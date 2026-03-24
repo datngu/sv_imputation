@@ -125,16 +125,16 @@ Step 5  MergeSVBatches          Merge all batches per chromosome
 
 | Script | Target | Description |
 |--------|--------|-------------|
-| `1c.run_phase1.sh` | local | Phase 1 — local test run |
-| `1d.run_phase2.sh` | local | Phase 2 — local test run |
-| `2c.run_saga_phase1.sh` | SAGA HPC | Phase 1 — SBATCH job (Singularity) |
-| `2d.run_saga_phase2.sh` | SAGA HPC | Phase 2 — SBATCH job (Singularity) |
+| `1a.run_phase1.sh` | local | Phase 1 — local test run |
+| `1b.run_phase2.sh` | local | Phase 2 — local test run |
+| `2a.run_saga_phase1.sh` | SAGA HPC | Phase 1 — SBATCH job (Singularity) |
+| `2b.run_saga_phase2.sh` | SAGA HPC | Phase 2 — SBATCH job (Singularity) |
 
 
 ### Phase 1 (local)
 
 ```bash
-bash 1c.run_phase1.sh
+bash 1a.run_phase1.sh
 ```
 
 Or manually:
@@ -155,7 +155,7 @@ nextflow run main_phase1.nf \
 ### Phase 2 (local)
 
 ```bash
-bash 1d.run_phase2.sh
+bash 1b.run_phase2.sh
 ```
 
 Or manually:
@@ -173,8 +173,8 @@ nextflow run main_phase2.nf \
 ### SAGA HPC
 
 ```bash
-sbatch 2c.run_saga_phase1.sh   # Phase 1
-sbatch 2d.run_saga_phase2.sh   # Phase 2 (run after Phase 1 completes)
+sbatch 2a.run_saga_phase1.sh   # Phase 1
+sbatch 2b.run_saga_phase2.sh   # Phase 2 (run after Phase 1 completes)
 ```
 
 ---
