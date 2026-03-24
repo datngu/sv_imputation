@@ -127,8 +127,9 @@ Step 5  MergeSVBatches          Merge all batches per chromosome
 |--------|--------|-------------|
 | `1a.run_phase1.sh` | local | Phase 1 — local test run |
 | `1b.run_phase2.sh` | local | Phase 2 — local test run |
-| `2a.run_saga_phase1.sh` | SAGA HPC | Phase 1 — SBATCH job (Singularity) |
-| `2b.run_saga_phase2.sh` | SAGA HPC | Phase 2 — SBATCH job (Singularity) |
+| `2a.run_saga_phase1.sh` | SAGA HPC | Phase 1 only — SBATCH job (Singularity) |
+| `2b.run_saga_phase2.sh` | SAGA HPC | Phase 2 only — SBATCH job (Singularity) |
+| `2c.run_saga_1stage.sh` | SAGA HPC | Full pipeline (Phase 1 + Phase 2) — single SBATCH job |
 
 
 ### Phase 1 (local)
@@ -173,8 +174,12 @@ nextflow run main_phase2.nf \
 ### SAGA HPC
 
 ```bash
+# Run phases separately (submit sequentially after each completes):
 sbatch 2a.run_saga_phase1.sh   # Phase 1
-sbatch 2b.run_saga_phase2.sh   # Phase 2 (run after Phase 1 completes)
+sbatch 2b.run_saga_phase2.sh   # Phase 2
+
+# Or run the full pipeline in a single job:
+sbatch 2c.run_saga_1stage.sh   # Phase 1 + Phase 2 in sequence
 ```
 
 ---
