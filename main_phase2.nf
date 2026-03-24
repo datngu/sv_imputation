@@ -137,7 +137,7 @@ process FilterRefPanel {
     output:
     tuple path("reduced_ref.vcf.gz"), path("reduced_ref.vcf.gz.csi")
 
-    cpus 1
+    cpus 2
     memory '8 GB'
 
     script:
