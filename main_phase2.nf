@@ -191,7 +191,9 @@ process BeagleSVImpute {
           path("${batch}.chr${chrom}.sv_imputed.vcf.gz.csi")
 
     cpus 4
-    memory '16 GB'
+    memory { 32.GB * Math.pow(2, task.attempt - 1) }
+    errorStrategy { task.exitStatus in [137, 140, 143, 247] ? 'retry' : 'finish' }
+    maxRetries 3
 
     script:
     def mem_gb = (task.memory.toGiga() - 1) as int
