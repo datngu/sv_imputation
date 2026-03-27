@@ -2,18 +2,40 @@
 
 A Nextflow DSL2 pipeline for imputing structural variants (SVs) into SNP array data using Beagle 5.
 
-The core idea is to use a long-read sequencing-derived SV reference panel and impute SV genotypes into
-short-read / SNP array samples. The pipeline follows the approach described in
+**What it does:** Takes SNP array genotype data (PLINK bfiles) and imputes structural variant (SV)
+genotypes into it, using a long-read sequencing-derived SV reference panel. This lets you call SVs
+in cohorts that were only genotyped on a standard SNP array. The approach is described in
 [elifesciences.org/reviewed-preprints/106115](https://elifesciences.org/reviewed-preprints/106115).
 
-The pipeline is split into two independent phases:
+---
 
-- **Phase 1** (`main_phase1.nf`): Preprocess array bfiles, (optionally) liftover to GRCh38, and impute
-  common SNPs per batch using a large 1000 Genomes reference panel. Outputs one
-  SNP-imputed VCF per batch × per chromosome.
-- **Phase 2** (`main_phase2.nf`): Use the Phase 1 per-batch SNP-imputed VCFs as input, build a reduced
-  SV reference panel (SNP positions from Phase 1 + all SVs), and run Beagle SV imputation
-  per batch × per chromosome. Merge batches per chromosome at the end.
+## Two pipeline options — which one should I use?
+
+This repository implements **two independent pipelines**. Choose based on your accuracy requirements
+and available compute time:
+
+### Pipeline A — 2-stage imputation (recommended, higher accuracy)
+
+Uses two sequential Nextflow workflows:
+
+1. **Phase 1** (`main_phase1.nf`): Preprocess array bfiles, optionally liftover coordinates from
+   GRCh37 to GRCh38, then impute common SNPs per batch using the large 1000 Genomes reference
+   panel. Outputs one SNP-imputed VCF per batch × per chromosome.
+2. **Phase 2** (`main_phase2.nf`): Takes the Phase 1 SNP-imputed VCFs, builds a reduced SV reference
+   panel (SNP positions from Phase 1 + all SVs), then runs Beagle SV imputation per batch × per
+   chromosome. Merges all batches per chromosome at the end.
+
+> **Why 2 stages?** Pre-imputing common SNPs with a dense reference panel provides a richer
+> haplotype scaffold for the downstream SV imputation, resulting in better accuracy.
+
+### Pipeline B — 1-stage imputation (`main_1_stage.nf`)
+
+A single Nextflow workflow that skips the intermediate SNP imputation step. Array bfiles are
+preprocessed and lifted to GRCh38, then SV imputation is performed directly using array positions
+as the scaffold.
+
+> **Trade-off:** Faster and simpler to run, but generally produces lower SV imputation accuracy
+> compared to the 2-stage approach.
 
 ---
 
@@ -51,25 +73,29 @@ conda activate sv_imputation
 
 ## Required input data
 
-### Phase 1
+### Shared inputs (all pipelines)
 
 | File / directory | Description |
 |-----------------|-------------|
 | `data/array_plink/{batch}.bed/bim/fam` | PLINK 1 bfiles, one prefix per array batch |
 | `data/input_manifest.csv` | CSV with `prefix` and `genome_build` columns (see below) |
-| `data/genomes/GRCh37.fa` + `.fai` | GRCh37 reference FASTA (for g37 batches) |
+| `data/genomes/GRCh37.fa` + `.fai` | GRCh37 reference FASTA (only needed for GRCh37 batches) |
 | `data/genomes/GRCh38.fa` + `.fai` | GRCh38 reference FASTA |
-| `data/genomes/GRCh37_to_GRCh38.chain.gz` | Liftover chain file (for g37 batches) |
-| `{snp_ref_panel_dir}/chr{N}.vcf.gz` + `.csi` | 1000G SNP ref panel, one VCF per chromosome |
+| `data/genomes/GRCh37_to_GRCh38.chain.gz` | Liftover chain file (only needed for GRCh37 batches) |
+| `data/ref_panel/panel.888samples.full.vcf.gz` + `.csi` | Full SV reference panel (long-read derived) |
 | `data/plink.GRCh38.map/no_chr_in_chrom_field/plink.chr{N}.GRCh38.map` | Per-chromosome genetic maps |
 
-### Phase 2
+### Additional input for Pipeline A — Phase 1 only
 
 | File / directory | Description |
 |-----------------|-------------|
-| `imputation_output_phase1/snp_imputed_vcfs/` | Phase 1 output directory (per-batch SNP-imputed VCFs) |
-| `data/ref_panel/panel.888samples.full.vcf.gz` + `.csi` | Full SV reference panel |
-| `data/plink.GRCh38.map/no_chr_in_chrom_field/plink.chr{N}.GRCh38.map` | Same genetic maps as Phase 1 |
+| `{snp_ref_panel_dir}/chr{N}.vcf.gz` + `.csi` | 1000G SNP ref panel, one VCF per chromosome |
+
+### Additional input for Pipeline A — Phase 2 only
+
+| File / directory | Description |
+|-----------------|-------------|
+| `imputation_output_phase1/snp_imputed_vcfs/` | Output directory produced by Phase 1 |
 
 ### Indexing reference files
 
@@ -94,7 +120,7 @@ data/array_plink/batch2,g38
 
 ## Workflow overview
 
-### Phase 1 — SNP imputation (`main_phase1.nf`)
+### Pipeline A — Phase 1: SNP imputation (`main_phase1.nf`)
 
 ```
 Step 1  ArrayBfile_to_VCF       PLINK bfiles → normalised VCF (GRCh37 ref, g37 batches)
@@ -109,7 +135,7 @@ Step 6  BeagleSNPImpute         Beagle 5 SNP imputation, per batch × per chromo
 Step 7  MergeSNPBatches         Merge all batches per chromosome
 ```
 
-### Phase 2 — SV imputation (`main_phase2.nf`)
+### Pipeline A — Phase 2: SV imputation (`main_phase2.nf`)
 
 ```
 Step 1  CollectSNPPositions     Union of CHROM/POS from all Phase 1 per-batch VCFs
@@ -119,20 +145,36 @@ Step 4  BeagleSVImpute          Beagle 5 SV imputation, per batch × per chromos
 Step 5  MergeSVBatches          Merge all batches per chromosome
 ```
 
+### Pipeline B — 1-stage SV imputation (`main_1_stage.nf`)
+
+```
+Step 1  ArrayBfile_to_VCF       PLINK bfiles → normalised VCF (GRCh37 ref, g37 batches)
+        ArrayBfile_to_VCF_38    PLINK bfiles → normalised VCF (GRCh38 ref, g38 batches)
+Step 2  LiftoverVcf             GRCh37 → GRCh38 (g37 batches only)
+Step 3  CollectArrayPositions   Union of CHROM/POS across all batches
+Step 4  FilterRefPanel          Reduce full SV ref: keep array positions + all SVs
+Step 5  SplitRefPanel           Split reduced SV ref by chromosome
+Step 6  BeagleSVImpute          Beagle 5 SV imputation directly from array data
+Step 7  MergeSVBatches          Merge all batches per chromosome
+```
+
 ---
 
 ## Run scripts
 
-| Script | Target | Description |
-|--------|--------|-------------|
-| `1a.run_phase1.sh` | local | Phase 1 — local test run |
-| `1b.run_phase2.sh` | local | Phase 2 — local test run |
-| `2a.run_saga_phase1.sh` | SAGA HPC | Phase 1 only — SBATCH job (Singularity) |
-| `2b.run_saga_phase2.sh` | SAGA HPC | Phase 2 only — SBATCH job (Singularity) |
-| `2c.run_saga_1stage.sh` | SAGA HPC | Full pipeline (Phase 1 + Phase 2) — single SBATCH job |
+| Script | Target | Pipeline | Description |
+|--------|--------|----------|-------------|
+| `1a.run_phase1.sh` | local | A (2-stage) | Phase 1 — local test run |
+| `1b.run_phase2.sh` | local | A (2-stage) | Phase 2 — local test run |
+| `2a.run_saga_phase1.sh` | SAGA HPC | A (2-stage) | Phase 1 only — SBATCH job (Singularity) |
+| `2b.run_saga_phase2.sh` | SAGA HPC | A (2-stage) | Phase 2 only — SBATCH job (Singularity) |
+| `2c.run_saga_1stage.sh` | SAGA HPC | B (1-stage) | 1-stage SV imputation — SBATCH job (Singularity) |
+| `3a.run_saga_phase1.sh` | SAGA HPC | A (2-stage) | Phase 1 — SBATCH job (local Singularity cache) |
+| `3b.run_saga_phase2.sh` | SAGA HPC | A (2-stage) | Phase 2 — SBATCH job (local Singularity cache) |
+| `3c.run_saga_1stage.sh` | SAGA HPC | B (1-stage) | 1-stage — SBATCH job (local Singularity cache) |
 
 
-### Phase 1 (local)
+### Pipeline A — Phase 1 (local)
 
 ```bash
 bash 1a.run_phase1.sh
@@ -153,7 +195,7 @@ nextflow run main_phase1.nf \
     -resume
 ```
 
-### Phase 2 (local)
+### Pipeline A — Phase 2 (local)
 
 ```bash
 bash 1b.run_phase2.sh
@@ -171,22 +213,56 @@ nextflow run main_phase2.nf \
     -resume
 ```
 
+### 1-stage pipeline (local)
+
+```bash
+nextflow run main_1_stage.nf \
+    --input_manifest    data/input_manifest.csv \
+    --genome_build_37   data/genomes/GRCh37.fa \
+    --genome_build_38   data/genomes/GRCh38.fa \
+    --chain_file        data/genomes/GRCh37_to_GRCh38.chain.gz \
+    --sv_ref_panel      data/ref_panel/panel.888samples.full.vcf.gz \
+    --plink_map_dir     data/plink.GRCh38.map/no_chr_in_chrom_field \
+    --outdir            imputation_output_1stage \
+    --trace_dir         imputation_traces_1stage \
+    -resume
+```
+
 ### SAGA HPC
 
 ```bash
-# Run phases separately (submit sequentially after each completes):
+# Pipeline A (2-stage) — submit phases sequentially:
 sbatch 2a.run_saga_phase1.sh   # Phase 1
-sbatch 2b.run_saga_phase2.sh   # Phase 2
+sbatch 2b.run_saga_phase2.sh   # Phase 2 (after Phase 1 completes)
 
-# Or run the full pipeline in a single job:
-sbatch 2c.run_saga_1stage.sh   # Phase 1 + Phase 2 in sequence
+# Pipeline B (1-stage):
+sbatch 2c.run_saga_1stage.sh
+
+# Alternative scripts with local Singularity cache:
+sbatch 3a.run_saga_phase1.sh   # Phase 1
+sbatch 3b.run_saga_phase2.sh   # Phase 2
+sbatch 3c.run_saga_1stage.sh   # 1-stage
 ```
 
 ---
 
 ## Parameters
 
-### Phase 1 (`main_phase1.nf`)
+### Pipeline B — 1-stage (`main_1_stage.nf`)
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--input_manifest` | `data/input_manifest.csv` | CSV with `prefix` and `genome_build` columns |
+| `--genome_build_37` | `data/genomes/GRCh37.fa` | GRCh37 FASTA (for g37 batches) |
+| `--genome_build_38` | `data/genomes/GRCh38.fa` | GRCh38 FASTA |
+| `--chain_file` | `data/genomes/GRCh37_to_GRCh38.chain.gz` | Liftover chain |
+| `--sv_ref_panel` | `data/ref_panel/panel.888samples.full.vcf.gz` | Full SV reference panel VCF |
+| `--plink_map_dir` | `data/plink.GRCh38.map/no_chr_in_chrom_field` | Genetic map directory |
+| `--chromosomes` | `1..22` | Chromosomes to process |
+| `--outdir` | `./imputation_output_1stage` | Output directory |
+| `--trace_dir` | `./imputation_traces_1stage` | Trace / log directory |
+
+### Pipeline A — Phase 1 (`main_phase1.nf`)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -200,7 +276,7 @@ sbatch 2c.run_saga_1stage.sh   # Phase 1 + Phase 2 in sequence
 | `--outdir` | `./imputation_output_phase1` | Output directory |
 | `--trace_dir` | `./imputation_traces_phase1` | Trace / log directory |
 
-### Phase 2 (`main_phase2.nf`)
+### Pipeline A — Phase 2 (`main_phase2.nf`)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -215,7 +291,17 @@ sbatch 2c.run_saga_1stage.sh   # Phase 1 + Phase 2 in sequence
 
 ## Outputs
 
-### Phase 1
+### Pipeline B — 1-stage (`main_1_stage.nf`)
+
+```
+imputation_output_1stage/
+    array_vcfs/               {batch}.norm.vcf.gz + .csi       (GRCh38, normalised)
+    lifted_vcfs/              {batch}.ref38.vcf.gz + .csi      (GRCh38 lifted, g37 batches)
+    sv_imputed_vcfs/          {batch}.chr{N}.sv_imputed.vcf.gz + .csi
+    sv_imputed_merged/        chr{N}.sv_merged.vcf.gz + .csi   (all batches merged per chr)
+```
+
+### Pipeline A — Phase 1
 
 ```
 imputation_output_phase1/
@@ -229,7 +315,7 @@ imputation_output_phase1/
     snp_imputed_merged/       chr{N}.snp_merged.vcf.gz + .csi  (all batches merged per chr)
 ```
 
-### Phase 2
+### Pipeline A — Phase 2
 
 ```
 imputation_output_phase2/
