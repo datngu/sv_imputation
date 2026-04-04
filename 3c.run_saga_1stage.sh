@@ -19,6 +19,7 @@ export SINGULARITY_TMPDIR="$PWD/singularity/tmp"
 
 nextflow run main_1_stage.nf \
     -profile saga,singularity,sv_impute \
+    -w work_1stage \
     --input_manifest data/input_manifest.csv \
     --genome_build_37 data/genomes/GRCh37.fa \
     --genome_build_38 data/genomes/GRCh38.fa \

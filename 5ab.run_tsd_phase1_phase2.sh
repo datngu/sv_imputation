@@ -20,14 +20,15 @@ echo "=== Starting Phase 1: SNP imputation ==="
 
 nextflow run main_phase1.nf \
     -profile tsd,singularity,sv_impute \
+    -w work_phase1_test \
     --input_manifest /Users/thanhdng/github/sv_imputation/data/input_manifest_tsd_test.csv \
-    --genome_build_37 data/genomes/GRCh37.fa \
-    --genome_build_38 data/genomes/GRCh38.fa \
-    --chain_file data/genomes/GRCh37_to_GRCh38.chain.gz \
+    --genome_build_37 /cluster/projects/p33/users/datn/data/genomes/GRCh37.fa \
+    --genome_build_38 /cluster/projects/p33/users/datn/data/genomes/GRCh38.fa \
+    --chain_file /cluster/projects/p33/users/datn/data/genomes/GRCh37_to_GRCh38.chain.gz \
     --snp_ref_panel_dir /cluster/projects/p33/users/datn/data/1000G_HG38_HC \
     --plink_map_dir data/plink.GRCh38.map/no_chr_in_chrom_field \
-    --outdir imputation_output_phase1 \
-    --trace_dir imputation_traces_phase1 \
+    --outdir imputation_output_phase1_test \
+    --trace_dir imputation_traces_phase1_test \
     -resume
 
 if [ $? -ne 0 ]; then
@@ -39,11 +40,12 @@ echo "=== Phase 1 completed successfully. Starting Phase 2: SV imputation ==="
 
 nextflow run main_phase2.nf \
     -profile tsd,singularity,sv_impute \
-    --phase1_snp_imputed_dir imputation_output_phase1/snp_imputed_vcfs \
+    -w work_phase2_test \
+    --phase1_snp_imputed_dir imputation_output_phase1_test/snp_imputed_vcfs \
     --sv_ref_panel /cluster/projects/p33/users/datn/data/elife_2025_sv_panel/panel.888samples.full.vcf.gz \
     --plink_map_dir data/plink.GRCh38.map/no_chr_in_chrom_field \
-    --outdir imputation_output_phase2 \
-    --trace_dir imputation_traces_phase2 \
+    --outdir imputation_output_phase2_test \
+    --trace_dir imputation_traces_phase2_test \
     -resume
 
 if [ $? -ne 0 ]; then

@@ -18,10 +18,11 @@ mkdir -p $SINGULARITY_TMPDIR
 
 nextflow run main_1_stage.nf \
     -profile tsd,singularity,sv_impute \
+    -w work_1stage \
     --input_manifest data/input_manifest.csv \
-    --genome_build_37 data/genomes/GRCh37.fa \
-    --genome_build_38 data/genomes/GRCh38.fa \
-    --chain_file data/genomes/GRCh37_to_GRCh38.chain.gz \
+    --genome_build_37 /cluster/projects/p33/users/datn/data/genomes/GRCh37.fa \
+    --genome_build_38 /cluster/projects/p33/users/datn/data/genomes/GRCh38.fa \
+    --chain_file /cluster/projects/p33/users/datn/data/genomes/GRCh37_to_GRCh38.chain.gz \
     --sv_ref_panel /cluster/projects/p33/users/datn/data/elife_2025_sv_panel/panel.888samples.full.vcf.gz \
     --plink_map_dir data/plink.GRCh38.map/no_chr_in_chrom_field \
     --outdir imputation_output_1stage \
