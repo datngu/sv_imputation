@@ -2,7 +2,7 @@
 #SBATCH --job-name=sv_imputation_phase1_phase2
 #SBATCH --account=p33_norment
 #SBATCH --time=144:00:00
-#SBATCH --mem=8G
+#SBATCH --mem-per-cpu=8G
 #SBATCH --cpus-per-task=1
 #SBATCH --output=sv_imputation_phase1_phase2_%j.log
 
