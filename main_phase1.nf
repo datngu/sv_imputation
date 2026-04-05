@@ -326,6 +326,7 @@ process ArrayBfile_to_VCF {
         --bed ${bed} \\
         --bim ${bim} \\
         --fam ${fam} \\
+        --not-chr 0 \\
         --merge-x no-fail \\
         --keep-allele-order \\
         --make-bed \\
@@ -393,6 +394,7 @@ process ArrayBfile_to_VCF_38 {
         --bed ${bed} \\
         --bim ${bim} \\
         --fam ${fam} \\
+        --not-chr 0 \\
         --merge-x no-fail \\
         --keep-allele-order \\
         --make-bed \\
