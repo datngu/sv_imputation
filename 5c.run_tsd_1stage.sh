@@ -19,7 +19,7 @@ mkdir -p $SINGULARITY_TMPDIR
 nextflow run main_1_stage.nf \
     -profile tsd,singularity,sv_impute \
     -w work_1stage_test \
-    --input_manifest /Users/thanhdng/github/sv_imputation/data/input_manifest_tsd_test.csv \
+    --input_manifest data/input_manifest_tsd_test.csv \
     --genome_build_37 /cluster/projects/p33/users/datn/data/genomes/GRCh37.fa \
     --genome_build_38 /cluster/projects/p33/users/datn/data/genomes/GRCh38.fa \
     --chain_file /cluster/projects/p33/users/datn/data/genomes/GRCh37_to_GRCh38.chain.gz \

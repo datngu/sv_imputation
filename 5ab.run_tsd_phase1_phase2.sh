@@ -21,7 +21,7 @@ echo "=== Starting Phase 1: SNP imputation ==="
 nextflow run main_phase1.nf \
     -profile tsd,singularity,sv_impute \
     -w work_phase1_test \
-    --input_manifest /Users/thanhdng/github/sv_imputation/data/input_manifest_tsd_test.csv \
+    --input_manifest data/input_manifest_tsd_test.csv \
     --genome_build_37 /cluster/projects/p33/users/datn/data/genomes/GRCh37.fa \
     --genome_build_38 /cluster/projects/p33/users/datn/data/genomes/GRCh38.fa \
     --chain_file /cluster/projects/p33/users/datn/data/genomes/GRCh37_to_GRCh38.chain.gz \
